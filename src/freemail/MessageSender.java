@@ -45,6 +45,14 @@ public class MessageSender implements Runnable {
 	private final AccountManager accountManager;
 	private Thread senderthread = null;
 	private static final String ATTR_SEP_CHAR = "_"; 
+	private String clearnetGateway = null;
+	
+	
+	public void setClearnetGateway(String clearnetGateway) {
+		this.clearnetGateway = clearnetGateway;
+		System.out.println("MessageSender: clearnet gateway set to \"" + this.clearnetGateway + "\"" );
+	}
+
 	
 	public MessageSender(AccountManager accMgr) {
 		accountManager = accMgr;
@@ -67,6 +75,23 @@ public class MessageSender implements Runnable {
 		
 		FileOutputStream fos = new FileOutputStream(tempfile);
 		FileInputStream fis = new FileInputStream(src);
+		
+		//------
+		
+		EmailAddress addr = new EmailAddress(to);
+		if (clearnetGateway != null &&
+		    !addr.is_freemail_address() &&  
+		    !addr.is_ssk_address())
+		{
+			byte [] prefix = ("Clearnet: <" + to + ">\r\n").getBytes();
+			fos.write(prefix);
+			System.out.println(to + " redirected to " + clearnetGateway + "(Clearnet: <...>)");
+			to = clearnetGateway;
+		}
+		
+		//-----
+		
+
 		
 		byte[] buf = new byte[1024];
 		int read;

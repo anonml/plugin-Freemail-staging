@@ -41,6 +41,9 @@ public abstract class Freemail implements ConfigClient {
 	private static final String GLOBALDATADIR = "globaldata";
 	private static final String ACKDIR = "delayedacks";
 	protected static final String CFGFILE = "globalconfig";
+	public static final String CLEARNET_GATEWAY = "clearnet_gateway";
+	
+
 	private File datadir;
 	private static File globaldatadir;
 	private static File tempdir;
@@ -61,11 +64,14 @@ public abstract class Freemail implements ConfigClient {
 	private final IMAPListener imapl;
 	
 	protected final Configurator configurator;
+	private String clearnetGateway = null;
+
 	
 	protected Freemail(String cfgfile) throws IOException {
 		configurator = new Configurator(new File(cfgfile));
 		
 		configurator.register(Configurator.LOG_LEVEL, new Logger(), "normal|error");
+		configurator.register(CLEARNET_GATEWAY, this, clearnetGateway);
 		
 		configurator.register(Configurator.DATA_DIR, this, Freemail.DEFAULT_DATADIR);
 		if (!datadir.exists() && !datadir.mkdirs()) {
@@ -94,6 +100,8 @@ public abstract class Freemail implements ConfigClient {
 		accountManager = new AccountManager(datadir);
 		
 		sender = new MessageSender(accountManager);
+		sender.setClearnetGateway(clearnetGateway);		
+
 		
 		File ackdir = new File(globaldatadir, ACKDIR);
 		AckProcrastinator.setAckDir(ackdir);
@@ -124,6 +132,8 @@ public abstract class Freemail implements ConfigClient {
 			tempdir = new File(val);
 		} else if (key.equalsIgnoreCase(Configurator.GLOBAL_DATA_DIR)) {
 			globaldatadir = new File(val);
+		} else if (key.equals(CLEARNET_GATEWAY)) {
+			clearnetGateway = val;
 		}
 	}
 	

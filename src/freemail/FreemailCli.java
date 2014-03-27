@@ -73,6 +73,8 @@ public class FreemailCli extends Freemail {
 					continue;
 				}
 				cfgfile = args[i];
+			} else if (args[i].equals("--list")) {
+				action = args[i];
 			} else if (args[i].equals("--help") || args[i].equals("-help") || args[i].equals("--h")) {
 				System.out.println("Usage:");
 				System.out.println(" java -jar Freemail.jar [-c config]");
@@ -121,6 +123,19 @@ public class FreemailCli extends Freemail {
 				System.out.println("Couldn't change password for "+username+". "+e.getMessage());
 				e.printStackTrace();
 			}
+			return;
+		} else if (action.equals("--list")) {
+			System.out.println("list of accounts:");
+			for ( Object ob :  freemail.getAccountManager().getAllAccounts())
+			{
+				if (!(ob instanceof FreemailAccount)) {
+					System.out.println("ups! account of unexpected type: " + ob.getClass().getCanonicalName());
+					continue;
+				}
+				FreemailAccount ac = (FreemailAccount)ob;
+				System.out.println("-" + ac.getUsername() + ":" + ac.getUsername()+"@"+AccountManager.getFreemailDomain(ac.getProps()));
+			}
+			
 			return;
 		} else if (action.equals("--shortaddress")) {
 			boolean success = false;

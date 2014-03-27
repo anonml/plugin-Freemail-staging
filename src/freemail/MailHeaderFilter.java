@@ -172,6 +172,8 @@ class MailHeaderFilter {
 			return val;
 		} else if (name.equalsIgnoreCase("In-Reply-To")) {
 			return val;
+		} else if (name.equalsIgnoreCase("Clearnet")) {
+			return val;			
 		} else {
 			return null;
 		}

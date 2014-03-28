@@ -50,10 +50,13 @@ public class MessageSender implements Runnable {
 	
 	public void setClearnetGateway(String clearnetGateway) {
 		this.clearnetGateway = clearnetGateway;
-		System.out.println("MessageSender: clearnet gateway set to \"" + this.clearnetGateway + "\"" );
+		Logger.normal(MessageSender.class, "clearnet gateway set to \"" + this.clearnetGateway + "\"" );
+	}
+		
+	public String getClearnetGateway() {
+		return clearnetGateway;
 	}
 
-	
 	public MessageSender(AccountManager accMgr) {
 		accountManager = accMgr;
 	}
@@ -76,22 +79,21 @@ public class MessageSender implements Runnable {
 		FileOutputStream fos = new FileOutputStream(tempfile);
 		FileInputStream fis = new FileInputStream(src);
 		
-		//------
-		
+		// redirection to a "gate way" node, if one is set up
+		// and recipient is not a freemail address 
 		EmailAddress addr = new EmailAddress(to);
 		if (clearnetGateway != null &&
 		    !addr.is_freemail_address() &&  
 		    !addr.is_ssk_address())
 		{
+			// add a header to message. this is assumed to be an internet email address
 			byte [] prefix = ("Clearnet: <" + to + ">\r\n").getBytes();
 			fos.write(prefix);
-			System.out.println(to + " redirected to " + clearnetGateway + "(Clearnet: <...>)");
+			Logger.normal(MessageSender.class, to + " redirected to " + clearnetGateway + "(Clearnet: <...>)");
+			
+			// redirection
 			to = clearnetGateway;
 		}
-		
-		//-----
-		
-
 		
 		byte[] buf = new byte[1024];
 		int read;

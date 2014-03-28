@@ -250,11 +250,10 @@ public class SMTPHandler extends ServerHandler implements Runnable {
 			return;
 		}
 		
-//		if (!addr.is_freemail_address()) {
-//			this.ps.print("553 Not a Freemail address\r\n");
-//			return;
-//		}
-		
+		if (!addr.is_freemail_address() && (msgsender.getClearnetGateway() == null)) {
+			this.ps.print("553 Not a Freemail address\r\n");
+			return;
+		}
 		
 		this.to.add(addr);
 		

@@ -44,7 +44,9 @@ public class MessageSender implements Runnable {
 	private static final int MAX_TRIES = 10;
 	private final AccountManager accountManager;
 	private Thread senderthread = null;
-	private static final String ATTR_SEP_CHAR = "_"; 
+	private static final String ATTR_SEP_CHAR = "_";
+	public static final String CLEARNET_TO_HEADER = "X-Clearnet-To";
+	public static final String FREENET_FROM_HEADER = "X-Freenet-From";
 	private String clearnetGateway = null;
 	
 	
@@ -67,32 +69,41 @@ public class MessageSender implements Runnable {
 		Enumeration<EmailAddress> e = to.elements();
 		while (e.hasMoreElements()) {
 			EmailAddress email = e.nextElement();
-			
-			this.copyToOutbox(msg, outbox, email.user + "@" + email.domain);
+			String rcpt = email.user + "@" + email.domain;
+
+			// redirection to a "gate way" node, if one is set up
+			// and recipient is not a freemail address 
+			if ((clearnetGateway != null) &&
+				    (!email.is_freemail_address()))
+			{
+			     this.copyToOutbox(msg, outbox, clearnetGateway, rcpt, 
+			    		 fromAccount.getUsername()+"@"+AccountManager.getFreemailDomain(fromAccount.getProps()));
+			} else
+			{
+				this.copyToOutbox(msg, outbox, rcpt, null, null); 
+			}
 		}
 		this.senderthread.interrupt();
 	}
 	
-	private void copyToOutbox(File src, File outbox, String to) throws IOException {
+	private void copyToOutbox(File src, File outbox, String to, String clearnetTo, String freenetFrom) throws IOException {
 		File tempfile = File.createTempFile("fmail-msg-tmp", null, Freemail.getTempDir());
 		
 		FileOutputStream fos = new FileOutputStream(tempfile);
 		FileInputStream fis = new FileInputStream(src);
 		
-		// redirection to a "gate way" node, if one is set up
-		// and recipient is not a freemail address 
-		EmailAddress addr = new EmailAddress(to);
-		if (clearnetGateway != null &&
-		    !addr.is_freemail_address() &&  
-		    !addr.is_ssk_address())
+		if (clearnetTo != null)
 		{
 			// add a header to message. this is assumed to be an internet email address
-			byte [] prefix = ("Clearnet: <" + to + ">\r\n").getBytes();
+			byte [] prefix = (CLEARNET_TO_HEADER + ": " + clearnetTo + "\r\n").getBytes();
 			fos.write(prefix);
-			Logger.normal(MessageSender.class, to + " redirected to " + clearnetGateway + "(Clearnet: <...>)");
-			
-			// redirection
-			to = clearnetGateway;
+			Logger.normal(MessageSender.class, clearnetTo + " redirected to " + to);
+		}
+		
+		if (freenetFrom != null)
+		{
+			byte [] prefix = (FREENET_FROM_HEADER + ": " + freenetFrom + "\r\n").getBytes();
+			fos.write(prefix);
 		}
 		
 		byte[] buf = new byte[1024];
@@ -229,6 +240,12 @@ public class MessageSender implements Runnable {
 			// couldn't get the mailsite - try again if you're not ready
 			//to give up yet
 			return false; 
+		}
+		
+		if (clearnetGateway != null)
+		{
+			ct.setClearnetToHeader(CLEARNET_TO_HEADER);
+			ct.setFreenetFromHeader(FREENET_FROM_HEADER);
 		}
 		
 		return ct.sendMessage(msg);

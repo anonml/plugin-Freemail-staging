@@ -30,6 +30,7 @@ import java.io.BufferedReader;
 import java.io.IOException;
 import java.lang.StringBuffer;
 import java.text.SimpleDateFormat;
+import java.util.ArrayList;
 import java.util.Date;
 import java.util.TimeZone;
 import java.text.ParseException;
@@ -38,6 +39,7 @@ import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
 import freemail.utils.Logger;
+import freemail.utils.EmailAddress;
 
 class MailHeaderFilter {
 	private final BufferedReader reader;
@@ -46,6 +48,12 @@ class MailHeaderFilter {
 	private static final SimpleDateFormat sdf;
 	private static final TimeZone gmt;
 	private static final Pattern messageIdPattern = Pattern.compile("<?([^\\@])*\\@([^>]*)>?");
+	
+	private String clearnetToHeader = null;
+	private String freenetFromHeader = null;
+
+	private ArrayList<EmailAddress> clearnetContacts = new ArrayList<EmailAddress>(10);
+	private boolean redirected = false;
 	
 	static {
 		sdf = new SimpleDateFormat("EEE, dd MMM yyyy HH:mm:ss Z", Locale.US);
@@ -59,6 +67,14 @@ class MailHeaderFilter {
 		this.foundEnd = false;
 	}
 	
+	public void setClearnetToHeader(String clearnetHeader) {
+		this.clearnetToHeader = clearnetHeader;
+	}
+	
+	public void setFreennetFromHeader(String header) {
+		this.freenetFromHeader = header;
+	}
+
 	public String readHeader() throws IOException {
 		String retval = null;
 		
@@ -104,6 +120,50 @@ class MailHeaderFilter {
 		if (bits[1] == null) return null;
 		
 		return bits[0]+": "+bits[1];
+	}
+	
+	private void addClernetContact(String val)
+	{
+		if (clearnetToHeader != null)
+		{
+			String[] entries = val.split(",");
+			for (String e : entries)
+			{
+				EmailAddress addr = new EmailAddress(e.trim());
+				if (!addr.is_freemail_address())
+				{
+					// check that there is not such an address already
+					boolean original = true;
+					for (EmailAddress stored : clearnetContacts)
+					{
+						if (stored.user.equals(addr.user) && stored.domain.equals(addr.domain))
+						{
+							original = false;
+							break;
+						}
+					}
+					if (original)
+					    clearnetContacts.add(addr);
+				}
+			}
+		}
+	}
+	
+	public String getClearnetHeaders()
+	{
+		if (redirected && clearnetToHeader != null && !clearnetContacts.isEmpty())
+		{
+			StringBuffer out = new StringBuffer();
+			out.append(clearnetToHeader).append(": ");
+			for (EmailAddress a : clearnetContacts)
+			{
+				out.append(a.user).append("@").append(a.domain).append(",");
+			}
+			out.delete(out.length()-1, out.length()); // remove last comma
+			String val = out.toString();
+			return val;
+		}
+		return null;
 	}
 	
 	private String filterHeader(String name, String val) {
@@ -156,11 +216,14 @@ class MailHeaderFilter {
 		} else if (name.equalsIgnoreCase("From")) {
 			return val;
 		} else if (name.equalsIgnoreCase("To")) {
+			addClernetContact(val);
 			return val;
 		} else if (name.equalsIgnoreCase("CC")) {
+			addClernetContact(val);
 			return val;
 		} else if (name.equalsIgnoreCase("BCC")) {
 			//The BCC field should not be sent
+			addClernetContact(val);
 			return null;
 		} else if (name.equalsIgnoreCase("Subject")) {
 			return val;
@@ -172,8 +235,12 @@ class MailHeaderFilter {
 			return val;
 		} else if (name.equalsIgnoreCase("In-Reply-To")) {
 			return val;
-		} else if (name.equalsIgnoreCase("Clearnet")) {
-			return val;			
+		} else if (clearnetToHeader != null && name.equalsIgnoreCase(clearnetToHeader)) {
+			addClernetContact(val);
+			redirected = true;
+			return null;			
+		} else if (freenetFromHeader != null && name.equalsIgnoreCase(freenetFromHeader )) {
+			return val;				
 		} else {
 			return null;
 		}

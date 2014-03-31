@@ -51,7 +51,6 @@ import freemail.fcp.ConnectionTerminatedException;
 import freemail.utils.Logger;
 
 import org.archive.util.Base32;
-
 import org.bouncycastle.crypto.digests.SHA256Digest;
 import org.bouncycastle.crypto.params.RSAKeyParameters;
 import org.bouncycastle.crypto.AsymmetricBlockCipher;
@@ -106,6 +105,18 @@ public class OutboundContact {
 	//FIXME: This behaves badly when the outbox changes
 	private int nextAckIndex = 0;
 	
+	private String clearnetToHeader = null;
+	private String freenetFromHeader = null;
+	
+	public void setClearnetToHeader(String clearnetHeader) {
+		this.clearnetToHeader = clearnetHeader;
+	}
+	public void setFreenetFromHeader(String clearnetHeader) {
+		this.freenetFromHeader = clearnetHeader;
+	}
+	
+	
+		
 	public OutboundContact(FreemailAccount acc, EmailAddress a) throws BadFreemailAddressException, IOException,
 	                                                           OutboundContactFatalException, ConnectionTerminatedException,
 	                                                           InterruptedException {
@@ -634,11 +645,18 @@ public class OutboundContact {
 			
 			BufferedReader br = new BufferedReader(new FileReader(body));
 			MailHeaderFilter filter = new MailHeaderFilter(br);
+			filter.setClearnetToHeader(clearnetToHeader);
+			filter.setFreennetFromHeader(freenetFromHeader);
 			
 			String chunk;
 			while ( (chunk = filter.readHeader()) != null ) {
 				pw.print(chunk+"\r\n");
 			}
+			
+			chunk = filter.getClearnetHeaders();
+			if (chunk != null)
+				pw.print(chunk+"\r\n");
+		
 			pw.print("\r\n");
 			
 			// Headers are done, copy the rest

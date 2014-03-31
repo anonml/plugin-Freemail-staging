@@ -184,6 +184,9 @@ public class PropsFile {
 			this.data = new HashMap<String, String>();
 		}
 		
+		if (val == null)
+			return true;
+		
 		Object o = this.data.put(key, val);
 		if (o == null || !o.equals(val)) {
 			try {

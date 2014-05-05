@@ -42,8 +42,8 @@ public abstract class Freemail implements ConfigClient {
 	private static final String ACKDIR = "delayedacks";
 	protected static final String CFGFILE = "globalconfig";
 	public static final String CLEARNET_GATEWAY = "clearnet_gateway";
+	public static final String CLEARNET_GATEWAY_SMTP_HOST = "smtp_gateway";
 	
-
 	private File datadir;
 	private static File globaldatadir;
 	private static File tempdir;
@@ -55,6 +55,7 @@ public abstract class Freemail implements ConfigClient {
 	private Thread smtpThread;
 	private Thread ackInserterThread;
 	private Thread imapThread;
+	private Thread clearnetRouterThread;
 	
 	private final AccountManager accountManager;
 	private final ArrayList<SingleAccountWatcher> singleAccountWatcherList = new ArrayList<SingleAccountWatcher>();
@@ -62,9 +63,11 @@ public abstract class Freemail implements ConfigClient {
 	private final SMTPListener smtpl;
 	private final AckProcrastinator ackinserter;
 	private final IMAPListener imapl;
+	private final ClearnetRouter clearnetRouter;
 	
 	protected final Configurator configurator;
 	private String clearnetGateway = null;
+	private String clearnetGatewaySmtpHost = null;
 
 	
 	protected Freemail(String cfgfile) throws IOException {
@@ -72,6 +75,7 @@ public abstract class Freemail implements ConfigClient {
 		
 		configurator.register(Configurator.LOG_LEVEL, new Logger(), "normal|error");
 		configurator.register(CLEARNET_GATEWAY, this, clearnetGateway);
+		configurator.register(CLEARNET_GATEWAY_SMTP_HOST, this, clearnetGatewaySmtpHost);
 		
 		configurator.register(Configurator.DATA_DIR, this, Freemail.DEFAULT_DATADIR);
 		if (!datadir.exists() && !datadir.mkdirs()) {
@@ -110,6 +114,8 @@ public abstract class Freemail implements ConfigClient {
 		
 		imapl = new IMAPListener(accountManager, configurator);
 		smtpl = new SMTPListener(accountManager, sender, configurator);
+		
+		clearnetRouter = new ClearnetRouter(this);
 	}
 	
 	public static File getTempDir() {
@@ -134,6 +140,8 @@ public abstract class Freemail implements ConfigClient {
 			globaldatadir = new File(val);
 		} else if (key.equals(CLEARNET_GATEWAY)) {
 			clearnetGateway = val;
+		} else if (key.equals(CLEARNET_GATEWAY_SMTP_HOST)) {
+			clearnetGatewaySmtpHost = val;
 		}
 	}
 	
@@ -141,6 +149,26 @@ public abstract class Freemail implements ConfigClient {
 		fcpThread = new Thread(fcpconn, "Freemail FCP Connection");
 		fcpThread.setDaemon(true);
 		fcpThread.start();
+	}
+	
+	protected void startClearnetRouter()
+	{
+		if (clearnetGatewaySmtpHost == null) return;
+		
+		String pts[] = clearnetGatewaySmtpHost.split(":");
+		int port = 25;
+		if (pts.length > 1)
+		{
+			try
+			{
+				port = new Integer(pts[1]);
+			}catch(Exception e)
+			{
+				System.out.println("error parsing clearnet gateway smtp server: '" + clearnetGatewaySmtpHost + "'");
+			}
+		}
+		clearnetRouter.connect("dummy", pts[0], port, "", "");
+		clearnetRouterThread = clearnetRouter.startRouting();
 	}
 	
 	// note that this relies on sender being initialized
@@ -208,6 +236,7 @@ public abstract class Freemail implements ConfigClient {
 		imapl.kill();
 		// now kill the FCP thread - that's what all the other threads will be waiting on
 		fcpconn.kill();
+		clearnetRouter.kill();
 		end = System.nanoTime();
 		Logger.debug(this, "Spent " + (end - start) + "ns killing other threads");
 		
@@ -246,6 +275,10 @@ public abstract class Freemail implements ConfigClient {
 				if (fcpThread != null) {
 					fcpThread.join();
 					fcpThread = null;
+				}
+				if (clearnetRouterThread != null) {
+					clearnetRouterThread.join();
+					clearnetRouterThread = null;
 				}
 				end = System.nanoTime();
 				Logger.debug(this, "Spent " + (end - start) + "ns joining other threads");

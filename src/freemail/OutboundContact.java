@@ -640,22 +640,26 @@ public class OutboundContact {
 			return false;
 		}
 		
+		
 		try {
 			pw.print("id="+uid+"\r\n\r\n");
 			
 			BufferedReader br = new BufferedReader(new FileReader(body));
-			MailHeaderFilter filter = new MailHeaderFilter(br);
-			filter.setClearnetToHeader(clearnetToHeader);
-			filter.setFreennetFromHeader(freenetFromHeader);
+			HeaderFilter_ClearnetExt filter = new HeaderFilter_ClearnetExt(br);
 			
 			String chunk;
 			while ( (chunk = filter.readHeader()) != null ) {
 				pw.print(chunk+"\r\n");
 			}
 			
-			chunk = filter.getClearnetHeaders();
-			if (chunk != null)
+			chunk = filter.getClearnetHeader();
+			if (chunk != null) {
 				pw.print(chunk+"\r\n");
+			
+				chunk = filter.getFreenetHeader();
+				if (chunk != null)
+					pw.print(chunk+"\r\n");
+			}
 		
 			pw.print("\r\n");
 			

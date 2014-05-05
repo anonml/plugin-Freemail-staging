@@ -75,6 +75,9 @@ public class FreemailCli extends Freemail {
 				cfgfile = args[i];
 			} else if (args[i].equals("--list")) {
 				action = args[i];
+			} else if (args[i].equals("--test")) {
+				System.out.println("testing");
+				action = "--test";
 			} else if (args[i].equals("--help") || args[i].equals("-help") || args[i].equals("--h")) {
 				System.out.println("Usage:");
 				System.out.println(" java -jar Freemail.jar [-c config]");
@@ -124,6 +127,9 @@ public class FreemailCli extends Freemail {
 				e.printStackTrace();
 			}
 			return;
+		} else if (action.equals("--test")) {
+			ClearnetRouter.test(freemail);
+			return;
 		} else if (action.equals("--list")) {
 			System.out.println("list of accounts:");
 			for ( Object ob :  freemail.getAccountManager().getAllAccounts())
@@ -134,6 +140,7 @@ public class FreemailCli extends Freemail {
 				}
 				FreemailAccount ac = (FreemailAccount)ob;
 				System.out.println("-" + ac.getUsername() + ":" + ac.getUsername()+"@"+AccountManager.getFreemailDomain(ac.getProps()));
+				System.out.println("   acc dir:" + ac.getAccountDir());
 			}
 			
 			return;
@@ -160,5 +167,6 @@ public class FreemailCli extends Freemail {
 
 		freemail.startWorkers(false);
 		freemail.startServers(false);
+		freemail.startClearnetRouter();
 	}
 }

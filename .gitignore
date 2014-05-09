@@ -4,3 +4,4 @@ lib/
 dist/
 override.properties
 build-test/
+.classpath

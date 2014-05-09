@@ -44,6 +44,7 @@ public abstract class Freemail implements ConfigClient {
 	protected static final String CFGFILE = "globalconfig";
 	public static final String CLEARNET_GATEWAY = "clearnet_gateway";
 	public static final String CLEARNET_GATEWAY_SMTP_HOST = "smtp_gateway";
+	public static final String SMTP_HOST_SSL = "smtp_gateway_ssl";
 	
 	private File datadir;
 	private static File globaldatadir;
@@ -69,6 +70,7 @@ public abstract class Freemail implements ConfigClient {
 	protected final Configurator configurator;
 	private String clearnetGateway = null;
 	private String clearnetGatewaySmtpHost = null;
+	private boolean smtpSSL = true;
 
 	
 	protected Freemail(String cfgfile) throws IOException {
@@ -77,6 +79,7 @@ public abstract class Freemail implements ConfigClient {
 		configurator.register(Configurator.LOG_LEVEL, new Logger(), "normal|error");
 		configurator.register(CLEARNET_GATEWAY, this, clearnetGateway);
 		configurator.register(CLEARNET_GATEWAY_SMTP_HOST, this, clearnetGatewaySmtpHost);
+		configurator.register(SMTP_HOST_SSL, this, "true");
 		
 		configurator.register(Configurator.DATA_DIR, this, Freemail.DEFAULT_DATADIR);
 		if (!datadir.exists() && !datadir.mkdirs()) {
@@ -141,6 +144,11 @@ public abstract class Freemail implements ConfigClient {
 			clearnetGateway = val;
 		} else if (key.equals(CLEARNET_GATEWAY_SMTP_HOST)) {
 			clearnetGatewaySmtpHost = val;
+		} else if (key.equals(SMTP_HOST_SSL)) {
+			if ("true".equalsIgnoreCase(val))
+			    smtpSSL = true;
+		    else
+		    	smtpSSL = false;
 		}
 	}
 	
@@ -169,7 +177,7 @@ public abstract class Freemail implements ConfigClient {
 				System.out.println("Error parsing clearnet gateway smtp server: '" + clearnetGatewaySmtpHost + "'. Using " + pts[0] + ":" + port);
 			}
 		}
-		clearnetRouter.init(pts[0], port);
+		clearnetRouter.init(pts[0], port, null, null, smtpSSL);
 		clearnetRouterThread = clearnetRouter.startRouting(3000);
 	}
 	

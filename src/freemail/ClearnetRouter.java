@@ -401,6 +401,7 @@ public class ClearnetRouter {
 				try
 				{
 				    Files.copy(f.toPath(), failedmsg.toPath());
+				    System.out.println("Failed message stored to '" + failedmsg.getAbsolutePath() + "\"");
 				} catch(IOException ioe)
 				{
 					ioe.printStackTrace();

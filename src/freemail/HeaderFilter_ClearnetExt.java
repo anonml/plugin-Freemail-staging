@@ -7,6 +7,12 @@ import java.util.List;
 
 import freemail.utils.EmailAddress;
 
+
+/**
+ * A wrapper for {@link MailHeaderFilter} that stores information from headers related to clearnet routing. 
+ * @author karol presovsky
+ *
+ */
 public class HeaderFilter_ClearnetExt extends MailHeaderFilter
 {
 
@@ -17,7 +23,10 @@ public class HeaderFilter_ClearnetExt extends MailHeaderFilter
 	private boolean redirected = false;
 
 	
-	
+	/**
+	 * 
+	 * @return a contact from header "X-Freenet-From" or null if there no such header
+	 */
 	public String getFreenetSender() {
 		return freenetSender;
 	}
@@ -30,10 +39,15 @@ public class HeaderFilter_ClearnetExt extends MailHeaderFilter
 		addCustomHeader("Received");
 	}
 	
+	/**
+	 * returns a list of contacts from "X-Clearnet-To" header
+	 * @return
+	 */
 	public final List<EmailAddress> getClearnetContacts()
 	{
 		return clearnetContacts;
 	}
+	
 	
 	private void addClernetContact(String val)
 	{
@@ -60,6 +74,10 @@ public class HeaderFilter_ClearnetExt extends MailHeaderFilter
 		
 	}
 	
+	/**
+	 * Constructs a X-Clearnet-Header from clearnet contacts
+	 * @return
+	 */
 	public String getClearnetHeader()
 	{
 		if (redirected && !clearnetContacts.isEmpty())
@@ -87,8 +105,12 @@ public class HeaderFilter_ClearnetExt extends MailHeaderFilter
 
 	public int size = 0;
 	
+	/**
+	 * Wraps original readHeader method and ads custom action 
+	 */
 	@Override
-	public String readHeader() throws IOException {
+	public String readHeader() throws IOException 
+	{
 		String val = super.readHeader();
 		if (val == null)
 			return null; // end of headers

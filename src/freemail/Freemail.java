@@ -34,6 +34,7 @@ import freemail.smtp.SMTPListener;
 import freemail.utils.Logger;
 import freemail.config.ConfigClient;
 import freemail.config.Configurator;
+import freenet.node.fcp.GetPluginInfo;
 
 public abstract class Freemail implements ConfigClient {
 	private static final String TEMPDIRNAME = "temp";
@@ -106,11 +107,9 @@ public abstract class Freemail implements ConfigClient {
 		sender = new MessageSender(accountManager);
 		sender.setClearnetGateway(clearnetGateway);		
 
-		
 		File ackdir = new File(globaldatadir, ACKDIR);
 		AckProcrastinator.setAckDir(ackdir);
 		ackinserter = new AckProcrastinator();
-		
 		
 		imapl = new IMAPListener(accountManager, configurator);
 		smtpl = new SMTPListener(accountManager, sender, configurator);
@@ -151,6 +150,9 @@ public abstract class Freemail implements ConfigClient {
 		fcpThread.start();
 	}
 	
+	/**
+	 * Starts {@link ClearnetRouter} threaded process. 
+	 */
 	protected void startClearnetRouter()
 	{
 		if (clearnetGatewaySmtpHost == null) return;
@@ -164,11 +166,11 @@ public abstract class Freemail implements ConfigClient {
 				port = new Integer(pts[1]);
 			}catch(Exception e)
 			{
-				System.out.println("error parsing clearnet gateway smtp server: '" + clearnetGatewaySmtpHost + "'");
+				System.out.println("Error parsing clearnet gateway smtp server: '" + clearnetGatewaySmtpHost + "'. Using " + pts[0] + ":" + port);
 			}
 		}
-		clearnetRouter.connect("dummy", pts[0], port, "", "");
-		clearnetRouterThread = clearnetRouter.startRouting();
+		clearnetRouter.init(pts[0], port);
+		clearnetRouterThread = clearnetRouter.startRouting(3000);
 	}
 	
 	// note that this relies on sender being initialized

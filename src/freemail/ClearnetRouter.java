@@ -304,17 +304,7 @@ public class ClearnetRouter {
 			session.getProperties().setProperty("mail.smtp.localhost", AccountManager.getFreemailDomain(ac.getProps()));
 
 			File fwdbox = new File(ac.getAccountDir(), FWD_BOX);
-			if (!fwdbox.exists())
-			{
-				fwdbox.mkdir();
-			}
-			
-			if (!fwdbox.exists() || fwdbox.isFile())
-			{
-				System.out.println("Can't create dir 'forwarded' for account " + ac.getUsername() + 
-						". Skipping forwarding to clearnet smtp gateway for this account.");
-				continue;
-			}
+			File failedbox = new File(ac.getAccountDir(), FAILED_BOX);
 			
 			// read a stored date of last received mail, to skip older messages 
 			File cfg = new File(ac.getAccountDir(), "clearnet_router_cfg");
@@ -342,28 +332,27 @@ public class ClearnetRouter {
 				Date lm = new Date(f.lastModified());
 				if (lastDate == null || lm.after(lastDate) )
 				{
-					File fwdmsg = new File(fwdbox, f.getName());
-					if (fwdmsg.exists()) continue; // already forwarded
 					try
 					{
 						// check for clearnet header and send if found
 						if (process(f))
 						{
-							// copy to forwarded box
-							try
-							{
-						        Files.copy( f.toPath(), fwdmsg.toPath());
-							} catch(Exception e)
-							{
-								// break processing messages if one fails
-								e.printStackTrace();
-							}
+							// if successfully sent, move the file to "forwarded" folder
+							copy(f, fwdbox);
+							f.delete();
 						}
 					} catch (Exception e)
 					{
 						e.printStackTrace();
 						// save failed for manual resolution
-						saveFailed(f, ac.getAccountDir());
+						try
+						{
+						    copy(f, failedbox);
+							f.delete();
+						} catch(Exception ex)
+						{
+							ex.printStackTrace();
+						}
 					}
 				} 
 				
@@ -379,36 +368,22 @@ public class ClearnetRouter {
 	}
 	
 	/**
-	 * saves message file from account folder to "failed" sub-folder. Creates one if does not exist. 
+	 * Copies a file to destination folder. If folder does not exist, creates one. 
 	 * @param f
 	 * @param accountDir
+	 * @throws Exception 
 	 */
-	private void saveFailed(File f, File accountDir)
+	private void copy(File f, File destFolder) throws Exception
 	{
-		File failedbox = new File(accountDir, FAILED_BOX);
-		if (!failedbox.exists())
+		if (!destFolder.exists())
 		{
-			if (!failedbox.mkdir())
-			{
-				System.out.println("Error: Could not create failed box " + failedbox.getAbsolutePath());
-			}
-		}
-		if (failedbox.exists())
-		{
-			File failedmsg = new File(failedbox, f.getName());
-			if (failedmsg.exists())
-			{
-				try
-				{
-				    Files.copy(f.toPath(), failedmsg.toPath());
-				    System.out.println("Failed message stored to '" + failedmsg.getAbsolutePath() + "\"");
-				} catch(IOException ioe)
-				{
-					ioe.printStackTrace();
-				}
-			}
+			if (!destFolder.mkdir())
+				throw new Exception("Error: Could not create " + destFolder.getAbsolutePath());
 		}
 		
+		File f2 = new File(destFolder, f.getName());
+		if (!f2.exists())
+			Files.copy(f.toPath(), f2.toPath());
 	}
 
 }

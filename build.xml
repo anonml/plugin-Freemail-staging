@@ -6,6 +6,7 @@
 
 	<!-- set global properties for this build -->
 	<property name="src" location="src"/>
+	<property name="lib" location="lib"/>
 	<property name="test" location="test"/>
 	<property name="test.run" location="run"/>
 	<property name="build" location="build"/>
@@ -36,11 +37,21 @@
 		</and>
 	</condition>
 
+	<target name="javamail-check-setup">
+		<available file="${lib}/javax.mail.jar" property="javamail-dist.present" />
+	</target>
+
+    <target name="javamail-check" unless="javamail-dist.present" depends="javamail-check-setup">
+      <fail 
+ 	    message="Error: library not found: ${lib}/javax.mail.jar. Get javax.mail.jar here: http://www.oracle.com/technetwork/java/javasebusiness/downloads/java-archive-downloads-eeplat-419426.html#javamail-1.4.7-oth-JPR"
+      />
+    </target>
+
 	<target name="bouncycastle-check">
 		<available file="${deps}/${bcdist}" property="bouncycastle-dist.present" />
 		<available file="${build}/org/bouncycastle" property="bouncycastle-bin.present" />
 	</target>
-
+	
 	<target name="bouncycastle-fetch" depends="bouncycastle-check" unless="bouncycastle-dist.present">
 		<mkdir dir="${deps}" />
 		<get src="http://www.bouncycastle.org/download/${bcdist}.zip"
@@ -60,7 +71,7 @@
 		</javac>
 	</target>
 
-	<target name="compile" depends="bouncycastle-compile">
+	<target name="compile" depends="bouncycastle-compile, javamail-check">
 		<mkdir dir="${build}"/>
 
 		<tstamp/>
@@ -79,6 +90,7 @@
 			<classpath>
 				<pathelement location="${freenet-cvs-snapshot.location}"/>
 				<pathelement path="${main.lib}"/>
+				<pathelement location="${lib}/javax.mail.jar"/>
 			</classpath>
 		</javac>
 
@@ -88,6 +100,7 @@
 			<classpath>
 				<pathelement location="${freenet-cvs-snapshot.location}"/>
 				<pathelement path="${main.lib}"/>
+				<pathelement location="${lib}/javax.mail.jar"/>
 			</classpath>
 			<compilerarg value="-Xlint"/>
 		</javac>
@@ -134,12 +147,30 @@
 	</target>
 
 	<target name="dist" depends="compile, unit">
+		<path id="build.classpath">
+			<fileset dir="${basedir}/">
+				<include name="${lib}/*.jar"/>
+			</fileset>
+		</path>
+
+		<pathconvert property="mf.classpath" pathsep=" ">
+			<path refid="build.classpath"/>
+			<mapper>
+				<chainedmapper>
+					<flattenmapper/>
+					<globmapper from="*.jar" to="lib/*.jar"/>
+				</chainedmapper>
+			</mapper>
+		</pathconvert>
+		
 		<mkdir dir="${dist}"/>
 		<jar jarfile="${dist}/Freemail.jar" basedir="${build}">
+			<zipgroupfileset dir="${lib}" includes="*.jar" excludes=""/>
 			<manifest>
 				<attribute name="Main-Class" value="freemail.FreemailCli"/>
 				<attribute name="Plugin-Main-Class" value="freemail.FreemailPlugin"/>
 				<attribute name="Built-By" value="${user.name}"/>
+				<attribute name="Class-Path" value="${mf.classpath}"/>
 				<section name="common">
 					<attribute name="Implementation-Title" value="Freemail"/>
 					<attribute name="Implementation-Version" value="0.0"/>

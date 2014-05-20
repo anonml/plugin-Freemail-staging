@@ -8,6 +8,6 @@
 	<classpathentry kind="con" path="org.eclipse.jdt.junit.JUNIT_CONTAINER/3"/>
 	<classpathentry kind="lib" path="/fred/lib/bcprov.jar"/>
 	<classpathentry kind="lib" path="/fred/lib/freenet/freenet-ext.jar" sourcepath="/Contrib/db4o/src/db4oj"/>
-	<classpathentry kind="lib" path="/Users/macbookpro/Documents/robota/Java/_freenet/javax.mail.jar" sourcepath="/Users/macbookpro/Documents/robota/Java/javaxmail-1.5.1-src/mail/src/main/java"/>
+	<classpathentry kind="lib" path="lib/javax.mail.jar"/>
 	<classpathentry kind="output" path="build"/>
 </classpath>
